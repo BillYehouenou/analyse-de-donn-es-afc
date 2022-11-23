@@ -1,6 +1,6 @@
 ---
 title: "Projet d'Analyse des données"
-author: "Bill Yehouenou"
+author: "Bill Yehouenou, Sacha Bigarré"
 date: "2022-11-18"
 output: html_document
 ---
@@ -43,4 +43,3 @@ AFC <- function(x){
 
 barplot(AFC(bordeaux))
 ```
-
