@@ -1,0 +1,97 @@
+---
+title: 'Sujet 1 : Analyse Factorielle des Correspondances (AFC)'
+author: "Bill Yehouenou, Lilou Augeray, Sacha Bigarre"
+date: "2022-11-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+getwd()
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, comment = NA)
+```
+
+# 1. Création de la fonction AFC
+```{r definition de la fonction afc}
+AFC <- function(N){
+  Nind <- sum(N)
+  #a. calcul des metriques
+  Di <- diag(prop.table(rowSums(N)))
+  Dj <- diag(prop.table(colSums(N)))
+  #calculs des inverses et autres
+  DiInv <- diag(1/prop.table(rowSums(N)))
+  DjInv <- diag(1/prop.table(colSums(N)))
+  #calcul de Dj^{1/2} et son inverse
+  DjDemi <- diag(sqrt(colSums(prop.table(N))))
+  DjDemiInv <- diag(1/sqrt(colSums(prop.table(N))))
+  #b. tableau des frequences Z
+  vec_Z <- unlist(prop.table(N))
+  Z <- matrix(vec_Z, nrow(N), ncol(N))
+  #c. matrice des Ã©carts a l'independance X
+  X <- (DiInv %*% Z %*% DjInv) - 1
+  #d. calcul de la matrice V
+  V <- t(X) %*% Di %*% X
+  #e. vecteurs propres et mise en place de la matrice normee A
+  DjDemiVDjDemi <- DjDemi %*% V %*% DjDemi
+  #decomposition en vecteurs et valeurs propres
+  ll <- eigen(DjDemiVDjDemi, symmetric=TRUE)
+  r = length(ll$values[ll$values > 10^-10])
+  A <- DjDemiInv %*% ll$vectors[,1:r]
+  #f. determination des vecteurs propres DI-normes par la formule de transition
+  C <- matrix(0,nrow = nrow(N), r)
+  for (k in 1:r){
+    C[,k] <- 1/sqrt(ll$values[k]) * (X %*% Dj %*% A[,k])
+  }
+  #g. calcul du vecteur qui stocke le pourcentage d'inertie
+  inertieBrute <- ll$values 
+  vec_prct_inertie <- as.vector(inertieBrute*100/sum(inertieBrute))
+  #h. calcul des coordonnees des lignes et colones
+  A_tilde <- matrix(0, nrow=ncol(N), r)
+  C_tilde <- matrix(0, nrow = nrow(N), r)
+  for (k in 1:r){
+    A_tilde[,k] <- sqrt(ll$values[k]) * A[,k]
+    C_tilde[,k] <- sqrt(ll$values[k]) * C[,k]
+  }
+  #i. liste des resultats
+  resu <- list(vec_prct_inertie,A,C,A_tilde,C_tilde)
+  return(resu)
+}
+```
+
+# 2. Graphique des lignes
+```{r graphique des lignes}
+graph_lignes <- function(N){
+  afc_table <- AFC(N)
+  coord_lignes <- afc_table[[5]]
+  par(pty = "s")
+  ecart <- c(min(afc_table[[5]]),max(afc_table[[5]]))
+  graph_ligne <- plot(coord_lignes,pch=15,cex=.5,xlim=ecart,ylim=ecart,
+                      xlab="Coordonnées sur axe 1",ylab="Coordonnées sur axe 2",
+                      main="Coordonnées des lignes du tableau de contingence")
+  abline(h=median(afc_table[[5]]),v=median(afc_table[[5]]),lty=15) #origine du graphique (0,0) et point moyen
+  return(graph_ligne)
+}
+```
+
+# 3. Graphique des colonnes
+```{r graphique des colonnes}
+graph_colones <- function(N){
+  afc_table <- AFC(N)
+  coord_colonnes <- afc_table[[4]]
+  par(pty = "s")
+  ecart <- c(min(afc_table[[4]]),max(afc_table[[4]]))
+  graph_colonne <- plot(coord_colonnes,pch=16,cex=.5,col='red',xlim=ecart,ylim=ecart,
+                      xlab="Coordonnées sur axe 1",ylab="Coordonnées sur axe 2",
+                      main="Coordonnées des colonnes du tableau de contingence")
+  abline(h=median(afc_table[[4]]),v=median(afc_table[[4]]),lty=15) #origine du graphique (0,0) et point moyen
+  return(graph_colonne)
+}
+```
+
+# 4. Test des fonctions avec la table _bordeaux_
+```{r test des fonctions}
+bordeaux <- read.csv("bordeaux.csv", sep = ";")
+AFC(bordeaux)
+graph_lignes(bordeaux)
+graph_colones(bordeaux)
+```
